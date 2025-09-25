@@ -39,9 +39,9 @@ for SCRIPT in $(ls ${SQL_DIR}/*.sql | sort -V); do
         WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK;
         
         -- These SET commands ensure maximum verbosity.
-        SET ECHO ON;         -- Prints the SQL code being executed.
-        SET FEEDBACK ON;     -- Shows results like "Table created." or "1 row selected."
-        SET SERVEROUTPUT ON; -- Allows you to see DBMS_OUTPUT.PUT_LINE messages.
+        SET ECHO ON         -- Prints the SQL code being executed.
+        SET FEEDBACK ON     -- Shows results like "Table created." or "1 row selected."
+        SET SERVEROUTPUT ON -- Allows you to see DBMS_OUTPUT.PUT_LINE messages.
 
         PROMPT Executing &SCRIPT_NAME...
         @${SCRIPT}
