@@ -39,8 +39,8 @@ for SCRIPT in $(ls ${SQL_DIR}/*.sql | sort -V); do
     # WHENEVER SQLERROR: This is critical. It ensures the process stops if any SQL fails.
     sqlplus -L -S "${DB_USER}/${DB_PASSWORD}@${DB_CONNECT_STRING}" <<EOF
         WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK;
-        SET ECHO ON; -- This will print each SQL statement as it is executed.
-        SET SERVEROUTPUT ON; -- This enables output from DBMS_OUTPUT.
+        SET ECHO ON
+        SET SERVEROUTPUT ON
         PROMPT Executing &SCRIPT_NAME...
         @${SCRIPT}
         COMMIT;
