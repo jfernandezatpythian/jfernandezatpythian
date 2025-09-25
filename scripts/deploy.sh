@@ -36,12 +36,10 @@ for SCRIPT in $(ls ${SQL_DIR}/*.sql | sort -V); do
     # The "-S" (silent) flag has been REMOVED to allow error reporting.
     sqlplus -L "${DB_USER}/${DB_PASSWORD}@${DB_CONNECT_STRING}" <<EOF
         -- This command is critical. It stops the script on any SQL error.
-        WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK;
-        
-        -- These SET commands ensure maximum verbosity.
-        SET ECHO ON         -- Prints the SQL code being executed.
-        SET FEEDBACK ON     -- Shows results like "Table created." or "1 row selected."
-        SET SERVEROUTPUT ON -- Allows you to see DBMS_OUTPUT.PUT_LINE messages.
+        WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK
+        SET ECHO ON        
+        SET FEEDBACK ON    
+        SET SERVEROUTPUT ON 
 
         PROMPT Executing &SCRIPT_NAME...
         @${SCRIPT}
