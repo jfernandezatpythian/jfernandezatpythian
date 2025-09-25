@@ -23,5 +23,5 @@ CREATE OR REPLACE PACKAGE emp_pkg2 AS
       p_employee_id   IN  employees.employee_id%TYPE
   ) RETURN NUMBER;
 
-END emp_pkg;
+END emp_pkg2;
 /
