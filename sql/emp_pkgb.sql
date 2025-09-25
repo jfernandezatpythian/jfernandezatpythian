@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE BODY emp_pkg AS
 
-  -- Implementation of the hire_employee procedure
+  -- 
   PROCEDURE hire_employee (
       p_employee_id   IN  employees.employee_id%TYPE,
       p_first_name    IN  employees.first_name%TYPE,
