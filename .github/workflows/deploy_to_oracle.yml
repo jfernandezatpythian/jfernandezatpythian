@@ -1,0 +1,37 @@
+name: Deploy Oracle Database Changes
+
+# Trigger the workflow on a push to the main branch
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+
+jobs:
+  deploy-sql:
+    name: Deploy to Oracle DB
+    # This is the most important line: it tells the job to run on your on-premise server
+    runs-on: self-hosted
+
+    steps:
+      - name: 1. Check out repository code
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin' # Eclipse Temurin is a good open-source JDK
+          java-version: '17'
+
+      - name: 3. Download and Unpack Flyway
+        run: |
+          wget -qO- "https://download.red-gate.com/maven/release/org/flywaydb/flyway-commandline/10.15.0/flyway-commandline-10.15.0-linux-x64.tar.gz" | tar -xvz
+          echo "$PWD/flyway-10.15.0" >> $GITHUB_PATH
+
+      - name: 4. Run Flyway Migrate
+        env:
+          # Inject the secrets into the environment for Flyway to use
+          ORACLE_URL: ${{ secrets.ORACLE_URL }}
+          ORACLE_USER: ${{ secrets.ORACLE_USER }}
+          ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
+        run: flyway migrate
