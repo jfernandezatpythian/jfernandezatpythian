@@ -24,7 +24,7 @@ for SCRIPT in $(ls ${SQL_DIR}/*.sql | sort -V); do
     # The 'SET' commands ensure we only get the count number as output
     COUNT=$(sqlplus -S "${DB_USER}/${DB_PASSWORD}@${DB_CONNECT_STRING}" <<EOF
         SET HEADING OFF FEEDBACK OFF PAGESIZE 0;
-        SELECT count(*) FROM deployment_history WHERE script_name = '${SCRIPT_NAME}';
+        SELECT count(*) FROM system.deployment_history WHERE script_name = '${SCRIPT_NAME}';
         exit;
 EOF
     )
@@ -41,7 +41,7 @@ EOF
         sqlplus -S "${DB_USER}/${DB_PASSWORD}@${DB_CONNECT_STRING}" <<EOF
             WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK;
             @${SCRIPT}
-            INSERT INTO deployment_history (script_name) VALUES ('${SCRIPT_NAME}');
+            INSERT INTO system.deployment_history (script_name) VALUES ('${SCRIPT_NAME}');
             COMMIT;
             exit;
 EOF
