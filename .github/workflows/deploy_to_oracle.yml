@@ -1,4 +1,4 @@
-name: Deploy Oracle Database Changes (Native SQL)
+name: Deploy Oracle Changes with Liquibase
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-sql:
+  deploy-to-oracle:
     name: Deploy to Oracle DB
     runs-on: self-hosted
 
@@ -15,13 +15,15 @@ jobs:
       - name: 1. Check out repository code
         uses: actions/checkout@v4
 
-      - name: 2. Make deployment script executable
-        run: chmod +x scripts/deploy.sh
+      - name: 2. Download and Unpack Liquibase
+        run: |
+          wget -qO- "https://github.com/liquibase/liquibase/releases/download/v4.29.0/liquibase-4.29.0.tar.gz" | tar -xvz
+          echo "$PWD/liquibase-4.29.0" >> $GITHUB_PATH
 
-      - name: 3. Run SQL Deployment Script
+      - name: 3. Run Liquibase Update
         env:
-          # Inject secrets into the environment for the script to use
+          # Inject secrets as environment variables for liquibase.properties to use
           ORACLE_USER: ${{ secrets.ORACLE_USER }}
           ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
-          ORACLE_CONN_STRING: ${{ secrets.ORACLE_CONN_STRING }} # e.g., yourhost:1521/ORCL
-        run: ./scripts/deploy.sh
+          ORACLE_CONN_STRING: ${{ secrets.ORACLE_CONN_STRING }}
+        run: liquibase update
