@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE emp_pkg2 AS
 
-  /**
+  /**sdvsd
    * Adds a new employee to the employees table.
    * @param p_employee_id The new employee's ID.
    * @param p_first_name  The new employee's first name.
