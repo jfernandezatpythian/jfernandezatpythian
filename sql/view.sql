@@ -1,4 +1,3 @@
 /*tesddjjjdddmnnnjjjt*/
-CREATE VIEW testview as
+CREATE VIEW testview2 as
 select * from system.employees
-/
