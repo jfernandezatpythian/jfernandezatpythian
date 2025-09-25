@@ -1,6 +1,6 @@
 CREATE OR REPLACE PACKAGE emp_pkg2 AS
 
-  /*TmodifMODIFICATION OF THIS TEXT
+  /*TmodifMODIFICATION OF THIS TEXT NOW
    * Adds a new employee to the employees table.
    * @param p_employee_id The new employee's ID.
    * @param p_first_name  The new employee's first name.
