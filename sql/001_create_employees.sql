@@ -1,6 +1,6 @@
 --liquibase formatted sql
 
---changeset yourname:1
+--changeset jf:1
 CREATE TABLE employees (
     employee_id NUMBER PRIMARY KEY,
     first_name VARCHAR2(50),
