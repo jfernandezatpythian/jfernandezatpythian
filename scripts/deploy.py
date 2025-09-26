@@ -5,46 +5,59 @@ import subprocess
 # --- Database Credentials (from GitHub Secrets) ---
 DB_USER = os.environ.get('ORACLE_USER')
 DB_PASSWORD = os.environ.get('ORACLE_PASSWORD')
-DB_DSN = os.environ.get('ORACLE_DSN')
+DB_DSN = os.environ.get('ORACLE_DSN')  # e.g., your_db_host:1521/YOUR_SID
 
 def run_deployment(scripts_to_run):
-    """Executes a specific list of SQL scripts using SQL*Plus."""
+    """Executes a specific list of SQL scripts and shows compilation errors."""
     
     print("====================================================")
-    print("      ORACLE MIGRATION (CHANGED FILES ONLY)       ")
+    print("      ORACLE MIGRATION (WITH DEBUGGING)         ")
     print("====================================================")
 
-    # Validate that credentials are set
     if not all([DB_USER, DB_PASSWORD, DB_DSN]):
         print("❌ FATAL ERROR: Database environment variables are not set.")
         sys.exit(1)
 
-    # Execute each script passed as an argument
     for script_path in scripts_to_run:
         script_name = os.path.basename(script_path)
         print(f"\n----------------------------------------------------")
         print(f"▶️ RUNNING: '{script_name}' from path '{script_path}'")
         print(f"----------------------------------------------------")
         
-        command = [
-            "sqlplus",
-            "-L",
-            f"{DB_USER}/{DB_PASSWORD}@{DB_DSN}",
-            f"@{script_path}"
-        ]
+        # We now pass a multi-line script to SQL*Plus's standard input
+        # This includes the original script execution AND the SHOW ERRORS command
+        sqlplus_script_input = f"""
+            WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK;
+            PROMPT Executing {script_name}...
+            @{script_path}
+            PROMPT Checking for compilation errors...
+            SHOW ERRORS;
+            COMMIT;
+            exit;
+        """
 
         try:
+            # The command no longer includes the @script, as we are piping the commands in
+            command = ["sqlplus", "-L", f"{DB_USER}/{DB_PASSWORD}@{DB_DSN}"]
+            
             result = subprocess.run(
-                command, capture_output=True, text=True, check=False
+                command,
+                input=sqlplus_script_input, # Pass our wrapper script via standard input
+                capture_output=True,
+                text=True,
+                check=False
             )
 
+            # Print all output so you see both the execution and the errors
             if result.stdout:
                 print("--- SQL*Plus Output ---")
                 print(result.stdout.strip())
                 print("-----------------------")
 
-            if result.returncode != 0:
-                print(f"❌ FAILED: Script '{script_name}' exited with an error.")
+            # Check for SQL*Plus returning an error code OR if the output contains "compilation errors"
+            if result.returncode != 0 or "errors" in result.stdout.lower():
+                print(f"❌ FAILED: Script '{script_name}' likely has compilation errors.")
+                # The detailed error should already be in the stdout from SHOW ERRORS
                 if result.stderr:
                     print("--- Error Details (stderr) ---")
                     print(result.stderr.strip())
@@ -53,9 +66,6 @@ def run_deployment(scripts_to_run):
             
             print(f"✅ SUCCESS: '{script_name}' executed successfully.")
 
-        except FileNotFoundError:
-            print("❌ FATAL ERROR: 'sqlplus' not found. Is Oracle Client installed and in the PATH?")
-            sys.exit(1)
         except Exception as e:
             print(f"❌ An unexpected Python error occurred: {e}")
             sys.exit(1)
@@ -66,12 +76,8 @@ def run_deployment(scripts_to_run):
 
 
 if __name__ == "__main__":
-    # The script now reads file paths from command-line arguments
-    # sys.argv[0] is the script name itself, so we skip it.
     files_from_cli = sys.argv[1:]
-    
     if not files_from_cli:
-        print("🟡 No new or modified SQL files detected in this push. Nothing to deploy.")
+        print("🟡 No new or modified SQL files detected. Nothing to deploy.")
         sys.exit(0)
-    
     run_deployment(files_from_cli)
