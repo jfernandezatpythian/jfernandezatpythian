@@ -1,23 +1,43 @@
-name: Deploy Oracle Changes with Python
+name: Deploy Oracle Changes on Merge
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   deploy-to-oracle:
-    name: Deploy to Oracle DB
+    name: Deploy Changed SQL to Oracle
     runs-on: self-hosted
 
     steps:
       - name: 1. Check out repository code
+        # The fetch-depth: 0 is important to get the full git history
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: 2. Run Python Deployment Script
+      - name: 2. Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 3. Detect Changed SQL Files
+        id: changed_files
+        run: |
+          # This command compares the state before and after the push,
+          # filters for .sql files inside the PROD/ directory,
+          # and creates a space-separated list.
+          FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | grep '^PROD/.*\.sql$' | tr '\n' ' ')
+          echo "files_to_deploy=${FILES}" >> $GITHUB_OUTPUT
+          echo "Deploying files: ${FILES}"
+
+      - name: 4. Run Python Deployment Script
+        # This step only runs if the previous step found files to deploy
+        if: steps.changed_files.outputs.files_to_deploy != ''
         env:
           ORACLE_USER: ${{ secrets.ORACLE_USER }}
           ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
-          ORACLE_DSN: ${{ secrets.ORACLE_DSN }} # e.g., yourhost:1521/ORCL
-        run: /usr/bin/python3.8 scripts/deploy.py
+          ORACLE_DSN: ${{ secrets.ORACLE_DSN }}
+        # Pass the list of files as command-line arguments to the script
+        run: python scripts/deploy.py ${{ steps.changed_files.outputs.files_to_deploy }}
