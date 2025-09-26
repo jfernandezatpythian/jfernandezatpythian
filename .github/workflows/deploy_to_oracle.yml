@@ -1,4 +1,4 @@
-name: Deploy Oracle Changes with Liquibase
+name: Deploy Oracle Changes with Python
 
 on:
   push:
@@ -15,15 +15,14 @@ jobs:
       - name: 1. Check out repository code
         uses: actions/checkout@v4
 
-      - name: 2. Download and Unpack Liquibase
-        run: |
-          wget -qO- "https://github.com/liquibase/liquibase/releases/download/v4.29.0/liquibase-4.29.0.tar.gz" | tar -xvz
-          echo "$PWD/liquibase-4.29.0" >> $GITHUB_PATH
+      - name: 2. Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - name: 3. Run Liquibase Update
+      - name: 3. Run Python Deployment Script
         env:
-          # Inject secrets as environment variables for liquibase.properties to use
           ORACLE_USER: ${{ secrets.ORACLE_USER }}
           ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
-          ORACLE_CONN_STRING: ${{ secrets.ORACLE_CONN_STRING }}
-        run: liquibase update
+          ORACLE_DSN: ${{ secrets.ORACLE_DSN }} # e.g., yourhost:1521/ORCL
+        run: python scripts/deploy.py
