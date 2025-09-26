@@ -25,4 +25,4 @@ jobs:
           ORACLE_USER: ${{ secrets.ORACLE_USER }}
           ORACLE_PASSWORD: ${{ secrets.ORACLE_PASSWORD }}
           ORACLE_DSN: ${{ secrets.ORACLE_DSN }} # e.g., yourhost:1521/ORCL
-        run: python scripts/deploy.py
+        run: /usr/bin/python3.8 scripts/deploy.py
