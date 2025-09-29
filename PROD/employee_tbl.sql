@@ -1,11 +1,11 @@
-CREATE TABLE employees8 (
+CREATE TABLE employees9 (
     employee_id NUMBER PRIMARY KEY,
     first_name VARCHAR2(50),
     job_title VARCHAR2(50)
 );
 
 --changeset yourname:2
-CREATE VIEW vw_dummy_data8 AS
+CREATE VIEW vw_dummy_data9 AS
 SELECT 
     'Hello World' AS message,
     123           AS sample_number,
