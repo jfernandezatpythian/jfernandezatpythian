@@ -6,7 +6,7 @@ import subprocess
 DB_USER = os.environ.get('ORACLE_USER')
 DB_PASSWORD = os.environ.get('ORACLE_PASSWORD')
 DB_DSN = os.environ.get('ORACLE_DSN')
-SQL_DIR = "PROD"
+SQL_DIR = "sql"
 
 def run_deployment():
     """
