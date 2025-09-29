@@ -2,32 +2,49 @@ import os
 import sys
 import subprocess
 
-# --- Database Credentials (from GitHub Secrets) ---
+# --- Configuration ---
 DB_USER = os.environ.get('ORACLE_USER')
 DB_PASSWORD = os.environ.get('ORACLE_PASSWORD')
-DB_DSN = os.environ.get('ORACLE_DSN')  # e.g., your_db_host:1521/YOUR_SID
+DB_DSN = os.environ.get('ORACLE_DSN')
+SQL_DIR = "PROD"
 
-def run_deployment(scripts_to_run):
-    """Executes a specific list of SQL scripts and shows compilation errors."""
+def run_deployment():
+    """
+    Finds all .sql files, sorts them, and executes them unconditionally
+    using SQL*Plus, with detailed error reporting.
+    """
     
     print("====================================================")
-    print("      ORACLE MIGRATION (WITH DEBUGGING)         ")
+    print("   ORACLE DEPLOYMENT (STATELESS - RUN ALL FILES)  ")
     print("====================================================")
 
     if not all([DB_USER, DB_PASSWORD, DB_DSN]):
         print("❌ FATAL ERROR: Database environment variables are not set.")
         sys.exit(1)
 
-    for script_path in scripts_to_run:
-        script_name = os.path.basename(script_path)
+    # 1. Get ALL files from the directory and SORT them alphabetically
+    try:
+        local_scripts = sorted([f for f in os.listdir(SQL_DIR) if f.endswith('.sql')])
+        if not local_scripts:
+            print(f"🟡 WARNING: No .sql files found in './{SQL_DIR}/'. Nothing to do.")
+            sys.exit(0)
+    except FileNotFoundError:
+        print(f"❌ FATAL ERROR: SQL directory './{SQL_DIR}' not found.")
+        sys.exit(1)
+
+    print(f"Found {len(local_scripts)} scripts to process in execution order.")
+    
+    # 2. Execute each script
+    for script_name in local_scripts:
+        script_path = os.path.join(SQL_DIR, script_name)
         print(f"\n----------------------------------------------------")
-        print(f"▶️ RUNNING: '{script_name}' from path '{script_path}'")
+        print(f"▶️ RUNNING: '{script_name}'")
         print(f"----------------------------------------------------")
         
-        # We now pass a multi-line script to SQL*Plus's standard input
-        # This includes the original script execution AND the SHOW ERRORS command
+        # This wrapper script runs the user's file and then checks for compilation errors
         sqlplus_script_input = f"""
             WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK;
+            SET ECHO ON;
             PROMPT Executing {script_name}...
             @{script_path}
             PROMPT Checking for compilation errors...
@@ -37,47 +54,57 @@ def run_deployment(scripts_to_run):
         """
 
         try:
-            # The command no longer includes the @script, as we are piping the commands in
             command = ["sqlplus", "-L", f"{DB_USER}/{DB_PASSWORD}@{DB_DSN}"]
             
             result = subprocess.run(
                 command,
-                input=sqlplus_script_input, # Pass our wrapper script via standard input
+                input=sqlplus_script_input,
                 capture_output=True,
                 text=True,
                 check=False
             )
 
-            # Print all output so you see both the execution and the errors
+            # Always print the full output for complete logs
             if result.stdout:
                 print("--- SQL*Plus Output ---")
                 print(result.stdout.strip())
                 print("-----------------------")
 
-            # Check for SQL*Plus returning an error code OR if the output contains "compilation errors"
-            if result.returncode != 0 or "errors" in result.stdout.lower():
-                print(f"❌ FAILED: Script '{script_name}' likely has compilation errors.")
-                # The detailed error should already be in the stdout from SHOW ERRORS
+            # 3. Robust Error Checking
+            has_errors = False
+            stdout_lower = result.stdout.lower()
+
+            # Check for a non-zero exit code from SQL*Plus (e.g., for DDL errors)
+            if result.returncode != 0:
+                print(f"❌ FAILED: SQL*Plus exited with a non-zero status code ({result.returncode}).")
+                has_errors = True
+            
+            # --- IMPROVED ERROR DETECTION LOGIC ---
+            # Look for specific phrases that indicate errors, while explicitly excluding "No errors."
+            if (
+                "warning: package created with compilation errors." in stdout_lower or
+                "errors for" in stdout_lower
+            ) and "no errors." not in stdout_lower:
+                print("❌ FAILED: Detected compilation errors in the SQL*Plus output.")
+                has_errors = True
+                
+            if has_errors:
                 if result.stderr:
                     print("--- Error Details (stderr) ---")
                     print(result.stderr.strip())
                     print("------------------------------")
-                sys.exit(1)
+                sys.exit(1) # Stop the entire deployment
             
-            print(f"✅ SUCCESS: '{script_name}' executed successfully.")
+            print(f"✅ SUCCESS: '{script_name}' processed.")
 
         except Exception as e:
             print(f"❌ An unexpected Python error occurred: {e}")
             sys.exit(1)
 
     print("\n====================================================")
-    print("       ALL CHANGED SCRIPTS PROCESSED SUCCESSFULLY      ")
+    print("       ALL SCRIPTS PROCESSED SUCCESSFULLY      ")
     print("====================================================")
 
 
 if __name__ == "__main__":
-    files_from_cli = sys.argv[1:]
-    if not files_from_cli:
-        print("🟡 No new or modified SQL files detected. Nothing to deploy.")
-        sys.exit(0)
-    run_deployment(files_from_cli)
+    run_deployment()
